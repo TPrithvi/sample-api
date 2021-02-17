@@ -1,0 +1,11 @@
+FROM node:12.14.1-alpine3.11
+
+ENV NODE_ENV test
+WORKDIR /app
+
+RUN apk --update add make g++
+RUN apk add bash
+
+EXPOSE 3049
+
+ENTRYPOINT npm install && npm install -g supervisor && supervisor index.js

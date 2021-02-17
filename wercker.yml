@@ -1,0 +1,70 @@
+# sample API
+box: 
+    id: starlabio/ubuntu-nodejs-build
+    username: $DOCKER_HUB_USERNAME
+    password: $DOCKER_HUB_PASSWORD
+
+#1. Define services
+services:
+  - id: mongo:3.6
+    username: $DOCKER_HUB_USERNAME
+    password: $DOCKER_HUB_PASSWORD
+    cmd: |
+      mongod --port 27017
+
+#2. Build & test
+build:
+  steps:
+    - script:
+        name: Export DB
+        code: |
+          export DB_HOST="$MONGO_PORT_27017_TCP_ADDR:$MONGO_PORT_27017_TCP_PORT"
+          echo "$DB_HOST"
+
+    - script:
+        name: Run tests
+        code: |
+          npm install && npm test
+
+  after-steps:
+    - install-packages:
+        packages: ruby
+    - wantedly/pretty-slack-notify:
+        webhook_url: $SLACK_URL
+
+#3. Tag release & build Docker
+push-to-registry:
+  steps:
+    - install-packages:
+        packages: curl unzip
+
+    - script:
+        name: Set Build Tag
+        code: export BUILD_TAG="$(git rev-parse --short $WERCKER_GIT_COMMIT)"
+
+    - github-create-release:
+        token: $GITHUB_TOKEN
+        tag: $BUILD_TAG
+
+    - script:
+        name: Install JQ
+        code: |
+          apt-get update -y && apt-get install jq -y
+
+    - script:
+      name: Download Builder Script
+      code: |
+        wget $BUILDER_SCRIPT_URL -O master.zip && unzip master.zip
+        mv little-builder-master/bin bin
+
+    - script:
+      name: Docker Build
+      code: |
+        ./bin/wait_quay_build.sh "$WERCKER_GIT_OWNER/$WERCKER_APPLICATION_NAME" "$BUILD_TAG"
+
+  after-steps:
+    - install-packages:
+        packages: ruby
+
+    - wantedly/pretty-slack-notify:
+        webhook_url: $SLACK_URL

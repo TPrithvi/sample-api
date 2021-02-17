@@ -1,0 +1,34 @@
+version: '3.2'
+services:
+    sample-api:
+      image: sample-api
+      environment:
+        DB_HOST: mongo-sample
+        DB_NAME: sample_local
+        DB_PASS: testtest
+        DB_USER: sample-api
+        NODE_ENV: development
+        DEFAULT_sample_DELIVER_AT_INTERVAL: 15
+        # Other env variables to be added
+      ports:
+          - "3049:3049"
+      links:
+          - mongo-sample
+      depends_on:
+        - mongo-sample
+      volumes:
+        - type: bind
+          source: ./
+          target: /app
+    mongo-sample:
+      image: mongo:3.6
+      container_name: mongo-sample
+      restart: always
+      ports:
+          - "27035:27017"
+      volumes:
+            - ./db:/docker-entrypoint-initdb.d/
+      environment:
+          - MONGO_INITDB_DATABASE=sample_local
+          - MONGO_INITDB_ROOT_USERNAME=root
+          - MONGO_INITDB_ROOT_PASSWORD=test
